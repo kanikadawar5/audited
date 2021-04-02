@@ -77,6 +77,8 @@ module Audited
     def new_attributes
       (audited_changes || {}).inject({}.with_indifferent_access) do |attrs, (attr, values)|
         attrs[attr] = values.is_a?(Array) ? values.last : values
+        puts "hey"
+        puts attrs
         attrs
       end
     end
@@ -86,6 +88,8 @@ module Audited
       (audited_changes || {}).inject({}.with_indifferent_access) do |attrs, (attr, values)|
         attrs[attr] = Array(values).first
 
+        puts "hey"
+        puts attrs
         attrs
       end
     end

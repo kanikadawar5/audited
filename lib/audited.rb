@@ -6,14 +6,18 @@ module Audited
     attr_writer :audit_class
 
     def audit_class
+      puts "setting audit class"
+      puts :request_id
       @audit_class ||= Audit
     end
 
     def store
+      puts "store"
       Thread.current[:audited_store] ||= {}
     end
 
     def config
+      puts "config"
       yield(self)
     end
   end

@@ -83,6 +83,7 @@ module Audited
         after_create :audit_create    if audited_options[:on].include?(:create)
         before_update :audit_update   if audited_options[:on].include?(:update)
         before_destroy :audit_destroy if audited_options[:on].include?(:destroy)
+        after_rollback :audit_rollback
 
         # Define and set after_audit and around_audit callbacks. This might be useful if you want
         # to notify a party after the audit has been created or if you want to access the newly-created
@@ -285,33 +286,50 @@ module Audited
       end
 
       def audit_create
-        write_audit(action: 'create', audited_changes: audited_attributes,
-                    comment: audit_comment)
+        puts audit_associated_with
+        write_audit(action: 'create', model: self.class.name, audited_changes: audited_attributes,
+                    comment: audit_comment, object_id: id, timestamp: updated_at)
       end
 
       def audit_update
         unless (changes = audited_changes).empty? && (audit_comment.blank? || audited_options[:update_with_comment_only] == false)
-          write_audit(action: 'update', audited_changes: changes,
-                      comment: audit_comment)
+          write_audit(action: 'update', model: self.class.name, audited_changes: changes,
+                      comment: audit_comment, object_id: id, timestamp: updated_at)
         end
       end
 
       def audit_destroy
-        write_audit(action: 'destroy', audited_changes: audited_attributes,
-                    comment: audit_comment) unless new_record?
+        write_audit(action: 'destroy', model: self.class.name, audited_changes: audited_attributes,
+                    comment: audit_comment, object_id: id, timestamp: updated_at) unless new_record?
+      end
+
+      def audit_rollback
+        write_audit(action: 'rollback', model: self.class.name, audited_changes: audited_attributes, errors: self.errors.messages,
+          comment: audit_comment, object_id: id, timestamp: updated_at) unless new_record?
       end
 
       def write_audit(attrs)
-        attrs[:associated] = send(audit_associated_with) unless audit_associated_with.nil?
-        self.audit_comment = nil
+        current_user = current_user.present? ? current_user[:role] : (current_admin.present? ? current_admin[:role] : 'console')
+        user_id = current_user.present? ? current_user['id'] : (current_admin.present? ? current_admin['id'] : nil)
 
-        if auditing_enabled
-          run_callbacks(:audit) {
-            audit = audits.create(attrs)
-            combine_audits_if_needed if attrs[:action] != 'create'
-            audit
-          }
+        attrs['user_id'] = user_id
+        attrs['current_user'] = current_user
+        require 'socket'
+
+        ip=Socket.ip_address_list.detect{|intf| intf.ipv4_private?}
+        ip.ip_address if ip
+
+        puts ip.ip_address
+        puts attrs
+
+        client = Elasticsearch::Client.new(url: 'http://localhost:9200', log: true)
+        audit = AuditLogs.new(client: client, index_name: "audit_logs")
+        audit.settings number_of_shards: 1 do
+          mapping do
+            indexes :text, analyzer: 'snowball'
+          end
         end
+        audit.save(attrs)
       end
 
       def presence_of_audit_comment
