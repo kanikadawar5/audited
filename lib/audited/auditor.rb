@@ -285,32 +285,27 @@ module Audited
       end
 
       def audit_create
-        write_audit(action: 'create', audited_changes: audited_attributes,
-                    comment: audit_comment)
+        write_audit(action: 'create', audited_changes: audited_attributes)
       end
 
       def audit_update
         unless (changes = audited_changes).empty? && (audit_comment.blank? || audited_options[:update_with_comment_only] == false)
-          write_audit(action: 'update', audited_changes: changes,
-                      comment: audit_comment)
+          write_audit(action: 'update', audited_changes: changes)
         end
       end
 
       def audit_destroy
-        write_audit(action: 'destroy', audited_changes: audited_attributes,
-                    comment: audit_comment) unless new_record?
+        write_audit(action: 'destroy', audited_changes: audited_attributes) unless new_record?
       end
 
       def write_audit(attrs)
-        attrs[:associated] = send(audit_associated_with) unless audit_associated_with.nil?
-        self.audit_comment = nil
+        attrs['uuid'] = self.uuid
+        attrs['model'] = self.class.name
+        attrs['job_id'] = $job_id
+        attrs['timestamp'] = Time.now
 
         if auditing_enabled
-          run_callbacks(:audit) {
-            audit = audits.create(attrs)
-            combine_audits_if_needed if attrs[:action] != 'create'
-            audit
-          }
+          LoggingJob.perform_now(attrs, audited_options[:audit_index_as] || 'audit_logs')
         end
       end
 

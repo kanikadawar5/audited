@@ -24,15 +24,6 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency 'rubocop', '~> 0.54.0'
   gem.add_development_dependency 'rspec-rails', '~> 3.5'
   gem.add_development_dependency 'single_cov'
-
-  # JRuby support for the test ENV
-  if defined?(JRUBY_VERSION)
-    gem.add_development_dependency 'activerecord-jdbcsqlite3-adapter', '~> 1.3'
-    gem.add_development_dependency 'activerecord-jdbcpostgresql-adapter', '~> 1.3'
-    gem.add_development_dependency 'activerecord-jdbcmysql-adapter', '~> 1.3'
-  else
-    gem.add_development_dependency 'sqlite3', '~> 1.3'
-    gem.add_development_dependency 'mysql2', '>= 0.3.20'
-    gem.add_development_dependency 'pg', '>= 0.18', '< 2.0'
-  end
+  gem.add_development_dependency 'elasticsearch-model'
+  gem.add_development_dependency 'elasticsearch-rails'  
 end
