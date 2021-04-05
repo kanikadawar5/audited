@@ -309,8 +309,8 @@ module Audited
       end
 
       def write_audit(attrs)
-        current_user = current_user.present? ? current_user[:role] : (current_admin.present? ? current_admin[:role] : 'console')
-        user_id = current_user.present? ? current_user['id'] : (current_admin.present? ? current_admin['id'] : nil)
+        current_user = defined?(current_user) ? current_user[:role] : (defined?(current_admin) ? current_admin[:role] : 'console')
+        user_id = defined?(current_user) ? current_user['id'] : (defined?(current_admin) ? current_admin['id'] : nil)
 
         attrs['user_id'] = user_id
         attrs['current_user'] = current_user
